@@ -1,0 +1,3 @@
+../Drivers/Components/Src/esp32_at_io.c:28:8:esp32_io_init	8	static
+../Drivers/Components/Src/esp32_at_io.c:44:8:esp32_io_send	16	static
+../Drivers/Components/Src/esp32_at_io.c:59:9:esp32_io_recv	24	static
