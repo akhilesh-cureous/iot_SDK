@@ -19,6 +19,8 @@
 #define AT_CANT_FIND_AP    "+CWJAP:3"
 #define AT_CONN_FAIL       "+CWJAP:4"
 
+#define AP_CONNECTED       "+CWSTATE:2"
+
 #define MAX_AT_CMD_SIZE         256
 #define MAX_BUFFER_SIZE         (1024*3)
 #define AT_CMD_TERMINATOR       "\r\n"
@@ -87,6 +89,25 @@ typedef enum
 }esp32_jap_error_t;
 
 
+typedef enum
+{
+	CONNECTED = 0,
+	DISCONNECTED = 1
+
+}esp32_wifi_status_t;
+
+typedef enum
+{
+	MQTT_UNINITIALIZED 		= 0,
+	MQTT_ALREADYSET_USERCFG = 1,
+	MQTT_ALREADYSET_CONNCFG = 2,
+	MQTT_CONN_DISCONNECTED  = 3,
+	MQTT_CONN_ESTABLISHED   = 4,
+	MQTT_CONNECTED_BUT_NOT_SUBSCRIBED = 5,
+	MQTT_CONNECTED_AND_SUBSCRIBED = 6,
+	MQTT_OTHERS
+}esp32_mqtt_status_t;
+
 
 
 esp32_status_t esp32_init(void);
@@ -109,6 +130,8 @@ esp32_status_t esp32_mqtt_subscribe(const char *topic);
 
 void esp32_listen_for_cloud_messages(uint32_t listen_window_ms);
 
+esp32_wifi_status_t esp32_cwstate(void);
+esp32_mqtt_status_t MQTT_conn_state(void);
 
 void UART8_SendString(char *str);
 

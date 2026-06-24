@@ -63,7 +63,7 @@ void MX_UART7_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_UARTEx_DisableFifoMode(&huart7) != HAL_OK)
+  if (HAL_UARTEx_EnableFifoMode(&huart7) != HAL_OK)
   {
     Error_Handler();
   }
@@ -162,8 +162,8 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     hdma_uart7_rx.Init.MemInc = DMA_MINC_ENABLE;
     hdma_uart7_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
     hdma_uart7_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-    hdma_uart7_rx.Init.Mode = DMA_CIRCULAR;
-    hdma_uart7_rx.Init.Priority = DMA_PRIORITY_LOW;
+    hdma_uart7_rx.Init.Mode = DMA_NORMAL;
+    hdma_uart7_rx.Init.Priority = DMA_PRIORITY_MEDIUM;
     hdma_uart7_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
     if (HAL_DMA_Init(&hdma_uart7_rx) != HAL_OK)
     {
