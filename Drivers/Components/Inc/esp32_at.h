@@ -133,6 +133,8 @@ void esp32_listen_for_cloud_messages(uint32_t listen_window_ms);
 esp32_wifi_status_t esp32_cwstate(void);
 esp32_mqtt_status_t MQTT_conn_state(void);
 
+esp32_status_t esp32_publish_pressure(uint32_t *pressure);
+
 void UART8_SendString(char *str);
 
 #endif /* COMPONENTS_INC_ESP32_AT_H_ */

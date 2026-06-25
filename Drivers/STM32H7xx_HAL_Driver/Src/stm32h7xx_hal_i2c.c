@@ -2515,7 +2515,7 @@ HAL_StatusTypeDef HAL_I2C_Slave_Receive_DMA(I2C_HandleTypeDef *hi2c, uint8_t *pD
   *         in datasheet must be shifted to the left before calling the interface
   * @param  MemAddress Internal memory address
   * @param  MemAddSize Size of internal memory address
-  * @param  pData Pointer to data buffer
+  * @param  pData Pointer to data bufferW
   * @param  Size Amount of data to be sent
   * @param  Timeout Timeout duration
   * @retval HAL status

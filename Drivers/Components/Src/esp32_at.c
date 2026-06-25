@@ -13,14 +13,9 @@
 
 #include "esp32_at.h"
 
-
 HAL_UART_RxEventTypeTypeDef event_type;
 
-
-
 char at_cmd[MAX_AT_CMD_SIZE];
-//static char rx_buffer [MAX_BUFFER_SIZE];
-
 
 esp32_rx_state_t esp32_rx;
 esp32_rx_state_t *pesp32_rx = &esp32_rx;
@@ -30,6 +25,8 @@ extern UART_HandleTypeDef huart7;
 extern UART_HandleTypeDef huart8;
 
 uint8_t buffer[MAX_BUFFER_SIZE];
+
+extern uint32_t pre;
 
 void UART8_SendString(char *str)
 {
@@ -79,7 +76,6 @@ esp32_status_t esp32_join_ap(const uint8_t *ssid, const uint8_t *password) {
 	esp32_jap_error_t err;
 
 	if((ssid == NULL) || (password == NULL)){ ret = ESP32_ERROR; return ret;}
-
 
 	memset(at_cmd, '\0', MAX_AT_CMD_SIZE);
 	sprintf((char*)at_cmd, "AT+CWJAP=\"%s\",\"%s\"%s",ssid, password ,AT_CMD_TERMINATOR);
@@ -169,10 +165,6 @@ esp32_wifi_status_t esp32_cwstate(void)
 
 
 }
-
-
-
-
 
 
 esp32_status_t esp32_config_sntp(int utc_offset)
@@ -282,16 +274,47 @@ esp32_status_t esp32_publish_heartbeat(void)
 {
     esp32_status_t ret;
 
-    const char *payload = "{\"status\":\"alive\"}";
+    //const char *payload = "{\"status\":\"alive\"}";
+
+    char payload[50];
+
+
+    sprintf(payload,"{\"pressure\":\"%ld\"}", pre);
 
     memset(at_cmd, '\0', MAX_AT_CMD_SIZE);
 
-    sprintf((char*)at_cmd, "AT+MQTTPUBRAW=0,\"device/heartbeat\",18,0,0%s", AT_CMD_TERMINATOR);
+   // sprintf((char*)at_cmd, "AT+MQTTPUBRAW=0,\"device/heartbeat\",18,0,0%s", AT_CMD_TERMINATOR);
+
+    sprintf((char*)at_cmd, "AT+MQTTPUBRAW=0,\"device/heartbeat\",%d,0,0%s", strlen(payload),AT_CMD_TERMINATOR );
 
     ret = send_at_cmd_and_wait(at_cmd, &esp32_rx, 2000);
 
+    if (ret != ESP32_OK) {
+        return ret;
+    }
+
+    if(strstr((const char*)esp32_rx.buffer,">"))
+    {
+    	ret = send_at_cmd_and_wait(payload, &esp32_rx, 5000);
+   	}
+
+    return ret;
+}
 
 
+esp32_status_t esp32_publish_pressure(uint32_t *pressure)
+{
+    esp32_status_t ret;
+
+    char payload[50];
+
+    sprintf(payload,"{\"pressure\":\"%ld\"}", *pressure);
+
+    memset(at_cmd, '\0', MAX_AT_CMD_SIZE);
+
+    sprintf((char*)at_cmd, "AT+MQTTPUBRAW=0,\"device/heartbeat\",%d,0,0%s", strlen(payload),AT_CMD_TERMINATOR );
+
+    ret = send_at_cmd_and_wait(at_cmd, &esp32_rx, 2000);
 
     if (ret != ESP32_OK) {
         return ret;
@@ -307,6 +330,7 @@ esp32_status_t esp32_publish_heartbeat(void)
 
 
 
+
 esp32_status_t esp32_mqtt_subscribe(const char *topic)
 {
     esp32_status_t ret;
@@ -316,8 +340,6 @@ esp32_status_t esp32_mqtt_subscribe(const char *topic)
     sprintf((char*)at_cmd, "AT+MQTTSUB=0,\"%s\",0%s", topic, AT_CMD_TERMINATOR);
 
     ret = send_at_cmd_and_wait(at_cmd, &esp32_rx, 2000);
-
-
 
     return ret;
 }
@@ -352,6 +374,66 @@ void esp32_listen_for_cloud_messages(uint32_t listen_window_ms)
     }
 }
 
+
+esp32_status_t send_at_cmd_and_wait(const char * const cmd,
+                                    esp32_rx_state_t * const rx_state,
+                                    const uint32_t timeout_ms)
+{
+	esp32_status_t ret = ESP32_TIMEOUT;
+
+    memset((void *)rx_state->buffer, '\0', MAX_BUFFER_SIZE);
+    rx_state->complete_flag = 0;
+    rx_state->length = 0;
+
+	//HAL_UARTEx_ReceiveToIdle_DMA(&huart7, (uint8_t *)pesp32_rx->buffer, MAX_BUFFER_SIZE - 1);
+
+    if(HAL_UART_Transmit(&huart7, (uint8_t *)cmd, strlen(cmd), HAL_MAX_DELAY) != HAL_OK) {
+        return ESP32_ERROR;
+    }
+
+    uint32_t start_tick = HAL_GetTick();
+
+    while( HAL_GetTick() - start_tick <= timeout_ms)
+    {
+    	if(esp32_rx.complete_flag == 1)
+    	{
+            if (strstr((const char*)rx_state->buffer, AT_OK_STRING) != NULL) {
+                ret = ESP32_OK;
+                esp32_rx.length = 0;
+                break;
+            } else if (strstr((const char*)rx_state->buffer, AT_ERROR_STRING) != NULL) {
+                ret = ESP32_ERROR;
+                esp32_rx.length = 0;
+                break;
+            }else{
+            	rx_state->complete_flag = 0;
+            }
+
+    	}
+    }
+
+    return ret;
+}
+
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart7, (uint8_t *)pesp32_rx->buffer, MAX_BUFFER_SIZE - 1);
+
+	    if ( huart->Instance == UART7){
+
+	    	event_type = HAL_UARTEx_GetRxEventType(huart);
+
+	    	if(event_type == 0x00)
+	    	{
+	            esp32_rx.length += Size;
+	            esp32_rx.buffer[esp32_rx.length] = '\0';
+	    		memcpy((unsigned char*)buffer,esp32_rx.buffer,Size);
+	    		esp32_rx.complete_flag = 1;
+	    	}
+
+	    }
+}
 
 
 /*
@@ -428,175 +510,4 @@ esp32_status_t send_at_cmd_and_wait(const char * const cmd,
     return ret;
 }
 
-*/
-
-
-esp32_status_t send_at_cmd_and_wait(const char * const cmd,
-                                    esp32_rx_state_t * const rx_state,
-                                    const uint32_t timeout_ms)
-{
-	esp32_status_t ret = ESP32_TIMEOUT;
-
-    memset((void *)rx_state->buffer, '\0', MAX_BUFFER_SIZE);
-    rx_state->complete_flag = 0;
-    rx_state->length = 0;
-
-	//HAL_UARTEx_ReceiveToIdle_DMA(&huart7, (uint8_t *)pesp32_rx->buffer, MAX_BUFFER_SIZE - 1);
-
-    if(HAL_UART_Transmit(&huart7, (uint8_t *)cmd, strlen(cmd), HAL_MAX_DELAY) != HAL_OK) {
-        return ESP32_ERROR;
-    }
-
-    uint32_t start_tick = HAL_GetTick();
-
-    while( HAL_GetTick() - start_tick <= timeout_ms)
-    {
-    	if(esp32_rx.complete_flag == 1)
-    	{
-            if (strstr((const char*)rx_state->buffer, AT_OK_STRING) != NULL) {
-                ret = ESP32_OK;
-                esp32_rx.length = 0;
-                break;
-            } else if (strstr((const char*)rx_state->buffer, AT_ERROR_STRING) != NULL) {
-                ret = ESP32_ERROR;
-                esp32_rx.length = 0;
-                break;
-            }else{
-            	rx_state->complete_flag = 0;
-            }
-
-    	}
-    }
-
-    return ret;
-}
-
-
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
-{
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart7, (uint8_t *)pesp32_rx->buffer, MAX_BUFFER_SIZE - 1);
-
-	    if ( huart->Instance == UART7){
-
-	    	event_type = HAL_UARTEx_GetRxEventType(huart);
-
-	    	if(event_type == 0x00)
-	    	{
-	            esp32_rx.length += Size;
-	            esp32_rx.buffer[esp32_rx.length] = '\0';
-	    		memcpy((unsigned char*)buffer,esp32_rx.buffer,Size);
-	    		esp32_rx.complete_flag = 1;
-	    	}
-
-	    }
-}
-
-/*
-
-esp32_status_t send_at_cmd_and_wait(const char * const cmd,
-                                    esp32_rx_state_t * const rx_state,
-                                    const uint32_t timeout_ms)
-{
-    esp32_status_t ret = ESP32_TIMEOUT;
-
-    // 1. Force UART/DMA into a ready state
- //   HAL_UART_AbortReceive(&huart7);
-
-    // 2. Reset the state
-    memset((void *)rx_state->buffer, '\0', MAX_BUFFER_SIZE);
-    rx_state->complete_flag = 0;
-    rx_state->length = 0;
-
-
-    // 4. Send the Command
-    if(HAL_UART_Transmit(&huart7, (uint8_t *)cmd, strlen(cmd), HAL_MAX_DELAY) != HAL_OK) {
-        return ESP32_ERROR;
-    }
-
-    // 3. Arm the initial DMA transfer
-    if(HAL_UARTEx_ReceiveToIdle_DMA(&huart7, (uint8_t *)rx_state->buffer, MAX_BUFFER_SIZE - 1) != HAL_OK) {
-        return ESP32_ERROR;
-    }
-   // __HAL_DMA_DISABLE_IT(&hdma_uart7_rx, DMA_IT_HT);
-
-
-
-    // 5. Wait for the definitive string, accumulating chunks if necessary
-    const uint32_t start_tick = HAL_GetTick();
-
-    while ((HAL_GetTick() - start_tick) <= timeout_ms) {
-
-        if (rx_state->complete_flag) {
-
-            rx_state->complete_flag = 0; // Clear flag to ready up for the next chunk
-
-            // Check if our accumulated buffer contains the final response
-            if (strstr((const char *)rx_state->buffer, AT_OK_STRING) != NULL) {
-                ret = ESP32_OK;
-                break;
-            } else if (strstr((const char *)rx_state->buffer, AT_ERROR_STRING) != NULL) {
-                ret = ESP32_ERROR;
-                break;
-            }
-
-            // The ESP32 paused, but we haven't found OK or ERROR. It sent a chunk.
-            // We need to re-arm the DMA to append the next chunk to the end of our buffer.
-            uint16_t remaining_space = MAX_BUFFER_SIZE - rx_state->length - 1;
-
-            if (remaining_space > 0) {
-
-                // Notice the offset: &rx_state->buffer[rx_state->length]
-                if(HAL_UARTEx_ReceiveToIdle_DMA(&huart7, (uint8_t *)&rx_state->buffer[rx_state->length], remaining_space) != HAL_OK) {
-                    ret = ESP32_ERROR;
-                    break;
-                }
-                //__HAL_DMA_DISABLE_IT(&hdma_uart7_rx, DMA_IT_HT);
-
-            } else {
-                // Buffer is completely full but no terminator found. Increase the buffer size if it comes here
-                ret = ESP32_ERROR;
-                break;
-            }
-        }
-    }
-
-    // 6. Stop any ongoing reception once we have our answer or timed out
-    //HAL_UART_AbortReceive(&huart7);
-
-    return ret;
-}
-*/
-
-/*
-
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
-{
-	HAL_UART_RxEventTypeTypeDef event_type;
-
-    if ( huart->Instance == UART7){
-
-    	event_type = HAL_UARTEx_GetRxEventType(huart);
-
-    	if(event_type == 0x00)
-    	{
-
-        // 'Size' is the number of bytes received in THIS specific DMA burst.
-        // We add it to our running total.
-        esp32_rx.length += Size;
-
-        // Safety check to prevent buffer overflow
-        if (esp32_rx.length >= MAX_BUFFER_SIZE) {
-            esp32_rx.length = MAX_BUFFER_SIZE - 1;
-        }
-
-        // Null-terminate the string right at the end of the accumulated data
-        esp32_rx.buffer[esp32_rx.length] = '\0';
-
-        esp32_rx.complete_flag = 1;
-    }
-
-    	   // 3. Arm the initial DMA transfer
-    	 //  if(HAL_UARTEx_ReceiveToIdle_DMA(&huart7, (uint8_t *)pesp32_rx->buffer, MAX_BUFFER_SIZE - 1) != HAL_OK){Error_Handler();}
-    }
-}
 */
