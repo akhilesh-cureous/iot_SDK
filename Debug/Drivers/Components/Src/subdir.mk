@@ -5,16 +5,19 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../Drivers/Components/Src/at25128b.c \
 ../Drivers/Components/Src/esp32_at.c \
 ../Drivers/Components/Src/esp32_at_io.c \
 ../Drivers/Components/Src/xgzp6859.c 
 
 OBJS += \
+./Drivers/Components/Src/at25128b.o \
 ./Drivers/Components/Src/esp32_at.o \
 ./Drivers/Components/Src/esp32_at_io.o \
 ./Drivers/Components/Src/xgzp6859.o 
 
 C_DEPS += \
+./Drivers/Components/Src/at25128b.d \
 ./Drivers/Components/Src/esp32_at.d \
 ./Drivers/Components/Src/esp32_at_io.d \
 ./Drivers/Components/Src/xgzp6859.d 
@@ -27,7 +30,7 @@ Drivers/Components/Src/%.o Drivers/Components/Src/%.su Drivers/Components/Src/%.
 clean: clean-Drivers-2f-Components-2f-Src
 
 clean-Drivers-2f-Components-2f-Src:
-	-$(RM) ./Drivers/Components/Src/esp32_at.cyclo ./Drivers/Components/Src/esp32_at.d ./Drivers/Components/Src/esp32_at.o ./Drivers/Components/Src/esp32_at.su ./Drivers/Components/Src/esp32_at_io.cyclo ./Drivers/Components/Src/esp32_at_io.d ./Drivers/Components/Src/esp32_at_io.o ./Drivers/Components/Src/esp32_at_io.su ./Drivers/Components/Src/xgzp6859.cyclo ./Drivers/Components/Src/xgzp6859.d ./Drivers/Components/Src/xgzp6859.o ./Drivers/Components/Src/xgzp6859.su
+	-$(RM) ./Drivers/Components/Src/at25128b.cyclo ./Drivers/Components/Src/at25128b.d ./Drivers/Components/Src/at25128b.o ./Drivers/Components/Src/at25128b.su ./Drivers/Components/Src/esp32_at.cyclo ./Drivers/Components/Src/esp32_at.d ./Drivers/Components/Src/esp32_at.o ./Drivers/Components/Src/esp32_at.su ./Drivers/Components/Src/esp32_at_io.cyclo ./Drivers/Components/Src/esp32_at_io.d ./Drivers/Components/Src/esp32_at_io.o ./Drivers/Components/Src/esp32_at_io.su ./Drivers/Components/Src/xgzp6859.cyclo ./Drivers/Components/Src/xgzp6859.d ./Drivers/Components/Src/xgzp6859.o ./Drivers/Components/Src/xgzp6859.su
 
 .PHONY: clean-Drivers-2f-Components-2f-Src
 

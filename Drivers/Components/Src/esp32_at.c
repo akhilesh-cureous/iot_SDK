@@ -274,18 +274,10 @@ esp32_status_t esp32_publish_heartbeat(void)
 {
     esp32_status_t ret;
 
-    //const char *payload = "{\"status\":\"alive\"}";
-
-    char payload[50];
-
-
-    sprintf(payload,"{\"pressure\":\"%ld\"}", pre);
 
     memset(at_cmd, '\0', MAX_AT_CMD_SIZE);
 
-   // sprintf((char*)at_cmd, "AT+MQTTPUBRAW=0,\"device/heartbeat\",18,0,0%s", AT_CMD_TERMINATOR);
-
-    sprintf((char*)at_cmd, "AT+MQTTPUBRAW=0,\"device/heartbeat\",%d,0,0%s", strlen(payload),AT_CMD_TERMINATOR );
+    sprintf((char*)at_cmd, "AT+MQTTPUBRAW=0,\"device/heartbeat\",18,0,0%s", AT_CMD_TERMINATOR);
 
     ret = send_at_cmd_and_wait(at_cmd, &esp32_rx, 2000);
 
@@ -295,7 +287,9 @@ esp32_status_t esp32_publish_heartbeat(void)
 
     if(strstr((const char*)esp32_rx.buffer,">"))
     {
-    	ret = send_at_cmd_and_wait(payload, &esp32_rx, 5000);
+        memset(at_cmd, '\0', MAX_AT_CMD_SIZE);
+        sprintf((char*)at_cmd, "{\"status\" : \"alive\"}" );
+    	ret = send_at_cmd_and_wait(at_cmd, &esp32_rx, 5000);
    	}
 
     return ret;

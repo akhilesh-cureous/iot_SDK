@@ -57,6 +57,18 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define EEPROM_SCK_Pin GPIO_PIN_10
+#define EEPROM_SCK_GPIO_Port GPIOC
+#define EEPROM_MISO_Pin GPIO_PIN_11
+#define EEPROM_MISO_GPIO_Port GPIOC
+#define EEPROM_MOSI_Pin GPIO_PIN_12
+#define EEPROM_MOSI_GPIO_Port GPIOC
+#define EEPROM_CS_Pin GPIO_PIN_0
+#define EEPROM_CS_GPIO_Port GPIOD
+#define EEPROM_WP_Pin GPIO_PIN_1
+#define EEPROM_WP_GPIO_Port GPIOD
+#define EEPROM_HOLD_Pin GPIO_PIN_2
+#define EEPROM_HOLD_GPIO_Port GPIOD
 #define SENSOR01_SCL_Pin GPIO_PIN_6
 #define SENSOR01_SCL_GPIO_Port GPIOB
 #define SENSOR01_SDA_Pin GPIO_PIN_7
